@@ -43,7 +43,7 @@
 
                 msg.innerText = "Pesquisando Datalogger...";
                 device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: "Datalogger" }],
+                    filters: [{ namePrefix: "Todesco_DL" }],
                     optionalServices: [SERVICE_UUID]
                 });
 

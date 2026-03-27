@@ -199,3 +199,121 @@ void Wireless_Test2(){
     0                    
   );
 }
+#include <Preferences.h>
+
+// UUIDs baseados no index.html
+#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define SSID_UUID    "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define PASS_UUID    "a5b9c02d-0579-43c7-9fb6-63e843ebaf5b"
+#define EMAIL_UUID   "c8659212-af91-4ad3-a995-a58d6fd26145"
+
+bool ble_deviceConnected = false;
+bool ble_provisioning_done = false;
+String ble_ssid = "";
+String ble_pass = "";
+String ble_email = "";
+BLEServer* pServer = NULL;
+
+class MyServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      ble_deviceConnected = true;
+      Serial.println("[BLE] Dispositivo conectado. Interrompendo conexoes de WiFi conflitantes...");
+      // Importante para n�o interferir no r�dio
+      WiFi.disconnect(true);
+    };
+
+    void onDisconnect(BLEServer* pServer) {
+      ble_deviceConnected = false;
+      Serial.println("[BLE] Dispositivo desconectado.");
+      if (ble_provisioning_done) {
+          Serial.println("[BLE] Dados recebidos com sucesso. Reiniciando para aplicar...");
+          delay(1000);
+          ESP.restart();
+      } else {
+          pServer->startAdvertising(); 
+      }
+    }
+};
+
+class CharacteristicCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      String rxValue = pCharacteristic->getValue();
+      if (rxValue.length() > 0) {
+        String data = rxValue;
+        String uuidStr = String(pCharacteristic->getUUID().toString().c_str());
+        
+        if (uuidStr == String(SSID_UUID)) {
+          ble_ssid = data;
+          Serial.println("[BLE] SSID recebido.");
+        } else if (uuidStr == String(PASS_UUID)) {
+          ble_pass = data;
+          Serial.println("[BLE] PASS recebida.");
+        } else if (uuidStr == String(EMAIL_UUID)) {
+          ble_email = data;
+          Serial.println("[BLE] Email recebido.");
+          
+          if(ble_ssid.length() > 0 && ble_pass.length() > 0) {
+            Preferences preferencias;
+            // Salvar no NVS
+            WiFi.begin(ble_ssid.c_str(), ble_pass.c_str());
+            
+            preferencias.begin("datalogger", false);
+            preferencias.putString("email", ble_email);
+            preferencias.end();
+            ble_provisioning_done = true;
+          }
+        }
+      }
+    }
+};
+
+void Iniciar_BLE_Provisionamento() {
+    Serial.println("[BLE] Iniciando modulo...");
+    BLEDevice::init("Todesco_DL");
+    pServer = BLEDevice::createServer();
+    pServer->setCallbacks(new MyServerCallbacks());
+
+    BLEService *pService = pServer->createService(SERVICE_UUID);
+
+    BLECharacteristic *pCharSSID = pService->createCharacteristic(
+                                         SSID_UUID,
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+    pCharSSID->setCallbacks(new CharacteristicCallbacks());
+
+    BLECharacteristic *pCharPASS = pService->createCharacteristic(
+                                         PASS_UUID,
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+    pCharPASS->setCallbacks(new CharacteristicCallbacks());
+
+    BLECharacteristic *pCharEMAIL = pService->createCharacteristic(
+                                         EMAIL_UUID,
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+    pCharEMAIL->setCallbacks(new CharacteristicCallbacks());
+
+    pService->start();
+    
+    BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+
+    // Criando e preenchendo o Advertisement Data manualmente para evitar "N/A"
+    BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
+    oAdvertisementData.setName("Todesco_DL");
+    // Se sobrar espaco no pacote de 31 bytes, ele adiciona o Service UUID
+    oAdvertisementData.setCompleteServices(BLEUUID(SERVICE_UUID)); 
+    pAdvertising->setAdvertisementData(oAdvertisementData);
+
+    // Ajuste dos intervalos para publicidade "agressiva"
+    pAdvertising->setMinInterval(0x20);
+    pAdvertising->setMaxInterval(0x40);
+
+    BLEDevice::startAdvertising();
+
+    Serial.printf("[BLE] Grudado no UUID: %s\n", SERVICE_UUID);
+    Serial.println("[BLE] Aguardando conexao do navegador...");
+}
+
+bool is_BLE_Provisionamento_Conectado() {
+    return ble_deviceConnected;
+}

@@ -39,8 +39,8 @@
 #define ESP_PANEL_LCD_RGB_TIMING_HBP              (50)
 #define ESP_PANEL_LCD_RGB_TIMING_HFP              (10)
 #define ESP_PANEL_LCD_RGB_TIMING_VPW              (10)
-#define ESP_PANEL_LCD_RGB_TIMING_VBP              (25)
-#define ESP_PANEL_LCD_RGB_TIMING_VFP              (10)
+#define ESP_PANEL_LCD_RGB_TIMING_VBP              (20)
+#define ESP_PANEL_LCD_RGB_TIMING_VFP              (20)
 #define ESP_PANEL_LCD_RGB_FRAME_BUF_NUM           (2)     // 1/2/3
 #define ESP_PANEL_LCD_RGB_BOUNCE_BUF_SIZE         (ESP_PANEL_LCD_WIDTH * 10)     // Bounce buffer size in bytes. This function is used to avoid screen drift.
                                                           // To enable the bounce buffer, set it to a non-zero value. Typically set to `ESP_PANEL_LCD_WIDTH * 10`

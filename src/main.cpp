@@ -153,15 +153,29 @@ void Gerar_QRCode_Telegram() {
   }
 }
 
+static void wifi_qr_close_cb(lv_event_t * e) {
+    lv_obj_t * obj = lv_event_get_target(e);
+    lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+}
+
 void Gerar_QRCode_WiFi() {
   if (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
     lv_obj_clean(ui_uiPanelQRWiFi);
-    String wifi_str = "WIFI:S:Todesco_Datalogger;T:nopass;;";
-    lv_obj_t *qr = lv_qrcode_create(ui_uiPanelQRWiFi, 280,
-                                     lv_color_hex(0x000000),
-                                     lv_color_hex(0xFFFFFF));
+    
+    // Ajuste Automático: Força o painel a ficar perfeitamente no centro
+    lv_obj_set_align(ui_uiPanelQRWiFi, LV_ALIGN_CENTER);
+    lv_obj_set_y(ui_uiPanelQRWiFi, 0);
+
+    String wifi_str = "https://todekxko.github.io/Datalogger_Todesco/?mac=" + WiFi.macAddress();
+    lv_obj_t *qr = lv_qrcode_create(ui_uiPanelQRWiFi, 275,
+                                     lv_color_black(),
+                                     lv_color_white());
     lv_qrcode_update(qr, wifi_str.c_str(), wifi_str.length());
     lv_obj_center(qr);
+    
+    lv_obj_add_flag(ui_uiPanelQRWiFi, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(ui_uiPanelQRWiFi, wifi_qr_close_cb, LV_EVENT_CLICKED, NULL);
+    
     xSemaphoreGive(lvgl_mutex);
   }
 }
@@ -826,12 +840,33 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.begin();
   
-  // Removido WIFI_PS_NONE pois ele devora a banda de PSRAM ociosa do ESP32 e causa o "scroll" da tela
-  esp_wifi_set_ps(WIFI_PS_MIN_MODEM); 
+  // Forçando o No-Sleep do Wi-Fi para evitar o bug de scroll / jitter do ST7701
+  WiFi.setSleep(false);
+  esp_wifi_set_ps(WIFI_PS_NONE); 
   
   esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
   WiFi.setTxPower(WIFI_POWER_5dBm);
   Serial.println("[WIFI] Tentando conectar...");
+
+  // Aguardar até 5 segundos para ver se o WiFi conecta usando as credenciais salvas
+  uint32_t t_wifi = millis();
+  while (WiFi.status() != WL_CONNECTED && (millis() - t_wifi < 5000)) {
+      delay(100);
+      Serial.print(".");
+  }
+  Serial.println();
+
+  if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("[WIFI] Conectado com sucesso!");
+  } else {
+      Serial.println("[WIFI] Falha ao conectar rapidamente. Liberando radio para o BLE...");
+      // Gestao de Coexistencia (RF) exigida para garantir maxima estabilidade do Bluetooth
+      WiFi.disconnect(true);
+      WiFi.mode(WIFI_OFF);
+      delay(200); // pequeno respiro pro hardware antes de subir o BLE
+      
+      Iniciar_BLE_Provisionamento();
+  }
 
   if (!MDNS.begin("datalogger")) Serial.println("[mDNS] AVISO: Falha");
   else Serial.println("[mDNS] Iniciado: datalogger.local");
@@ -856,7 +891,9 @@ void setup() {
 // LOOP
 // ==========================================
 void loop() {
-  wm.process();
+  if (!is_BLE_Provisionamento_Conectado()) {
+    wm.process();
+  }
 
   if (pedir_portal_wifi && !portal_aberto) {
     pedir_portal_wifi      = false;
@@ -874,8 +911,9 @@ void loop() {
     ESP.restart();
   }
 
-  // Só atualiza a tela se tiver o mutex
-  if (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+  // Garante prioridade total à renderização (aguarda o mutex o tempo que for necessário)
+  // para evitar que atrasos de WiFi/Telegram causem perda de sincronismo e gerem o bug de scroll
+  if (xSemaphoreTake(lvgl_mutex, portMAX_DELAY) == pdTRUE) {
     Lvgl_Loop();
     xSemaphoreGive(lvgl_mutex);
   }
