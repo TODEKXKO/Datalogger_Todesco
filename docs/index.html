@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup - Datalogger</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background-color: #f4f6f9; text-align: center; }
+        .card { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; padding: 12px 20px; width: 100%; border-radius: 6px; font-size: 16px; cursor: pointer; }
+        button:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🛠 Pareamento Datalogger</h2>
+        <input type="text" id="ssid" placeholder="Nome da Rede Wi-Fi (SSID)" required>
+        <input type="password" id="pass" placeholder="Senha do Wi-Fi" required>
+        <input type="email" id="email" placeholder="E-mail (Para relatórios)" required>
+        <button id="btnConnect" onclick="iniciarBle()">1. Conectar c/ Equipamento via BLE</button>
+        <p id="status" style="margin-top: 15px; color: #555; text-align: center; font-size: 14px;"></p>
+    </div>
+
+    <script>
+        const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+        const SSID_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+        const PASS_UUID = "a5b9c02d-0579-43c7-9fb6-63e843ebaf5b";
+        const EMAIL_UUID = "c8659212-af91-4ad3-a995-a58d6fd26145";
+
+        let device, server;
+        const msg = document.getElementById('status');
+
+        async function iniciarBle() {
+            try {
+                const ssid = document.getElementById('ssid').value;
+                const pass = document.getElementById('pass').value;
+                const email = document.getElementById('email').value;
+
+                if(!ssid || !pass || !email) {
+                    alert("Preencha todos os campos!"); return;
+                }
+
+                msg.innerText = "Pesquisando Datalogger...";
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: "Datalogger" }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                msg.innerText = "Conectando ao Bluetooth do projeto...";
+                server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                msg.innerText = "Enviando Nome da Rede (SSID)...";
+                const ssidChar = await service.getCharacteristic(SSID_UUID);
+                await ssidChar.writeValue(new TextEncoder().encode(ssid));
+
+                msg.innerText = "Enviando Senha...";
+                const passChar = await service.getCharacteristic(PASS_UUID);
+                await passChar.writeValue(new TextEncoder().encode(pass));
+
+                msg.innerText = "Enviando E-mail...";
+                const emailChar = await service.getCharacteristic(EMAIL_UUID);
+                await emailChar.writeValue(new TextEncoder().encode(email));
+
+                msg.innerText = "✅ Tudo Certo! Verifique a tela do equipamento.";
+                msg.style.color = "green";
+                
+                // Desconecta após enviar e permitir que o ESP32 conecte no Wifi
+                setTimeout(() => server.disconnect(), 1000);
+
+            } catch (error) {
+                console.error(error);
+                msg.innerText = "❌ Erro ao parear. Tente novamente.";
+                msg.style.color = "red";
+            }
+        }
+    </script>
+</body>
+</html>
