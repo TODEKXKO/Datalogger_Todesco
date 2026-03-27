@@ -269,7 +269,11 @@ class CharacteristicCallbacks: public BLECharacteristicCallbacks {
 
 void Iniciar_BLE_Provisionamento() {
     Serial.println("[BLE] Iniciando modulo...");
-    BLEDevice::init("Todesco_DL");
+    BLEDevice::init("Todesco");
+    
+    // Potência Máxima do S3 (Volume Trovão +9dBm)
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
 
@@ -294,20 +298,12 @@ void Iniciar_BLE_Provisionamento() {
     pCharEMAIL->setCallbacks(new CharacteristicCallbacks());
 
     pService->start();
-    
+
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-
-    // Criando e preenchendo o Advertisement Data manualmente para evitar "N/A"
-    BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
-    oAdvertisementData.setName("Todesco_DL");
-    // Se sobrar espaco no pacote de 31 bytes, ele adiciona o Service UUID
-    oAdvertisementData.setCompleteServices(BLEUUID(SERVICE_UUID)); 
-    pAdvertising->setAdvertisementData(oAdvertisementData);
-
-    // Ajuste dos intervalos para publicidade "agressiva"
-    pAdvertising->setMinInterval(0x20);
-    pAdvertising->setMaxInterval(0x40);
-
+    pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->setScanResponse(true);
+    pAdvertising->setMinPreferred(0x06);  // helps with iPhone connections issue
+    pAdvertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
 
     Serial.printf("[BLE] Grudado no UUID: %s\n", SERVICE_UUID);

@@ -154,8 +154,7 @@ void Gerar_QRCode_Telegram() {
 }
 
 static void wifi_qr_close_cb(lv_event_t * e) {
-    lv_obj_t * obj = lv_event_get_target(e);
-    lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_uiPanelSetupWiFi, LV_OBJ_FLAG_HIDDEN);
 }
 
 void Gerar_QRCode_WiFi() {
@@ -784,6 +783,10 @@ void setup() {
                 ESP.getChipModel(), ESP.getChipRevision(), ESP.getCpuFreqMHz());
   Serial.println("=============================\n");
 
+  // Iniciar BLE Trovão imediatamente antes de sobrecarregar com a Tela
+  Iniciar_BLE_Provisionamento();
+  delay(500);
+
   pinMode(PIN_LUZ_TELA, OUTPUT);
   analogWrite(PIN_LUZ_TELA, 255);
 
@@ -859,13 +862,7 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
       Serial.println("[WIFI] Conectado com sucesso!");
   } else {
-      Serial.println("[WIFI] Falha ao conectar rapidamente. Liberando radio para o BLE...");
-      // Gestao de Coexistencia (RF) exigida para garantir maxima estabilidade do Bluetooth
-      WiFi.disconnect(true);
-      WiFi.mode(WIFI_OFF);
-      delay(200); // pequeno respiro pro hardware antes de subir o BLE
-      
-      Iniciar_BLE_Provisionamento();
+      Serial.println("[WIFI] Falha ao conectar. Trabalhando apenas como servidor BLE agora.");
   }
 
   if (!MDNS.begin("datalogger")) Serial.println("[mDNS] AVISO: Falha");
