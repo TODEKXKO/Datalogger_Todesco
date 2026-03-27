@@ -304,6 +304,13 @@ void Iniciar_BLE_Provisionamento() {
     pAdvertising->setScanResponse(true);
     pAdvertising->setMinPreferred(0x06);  // helps with iPhone connections issue
     pAdvertising->setMinPreferred(0x12);
+
+    BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
+    oAdvertisementData.setFlags(0x06); // General Discoverable Mode | BR_EDR_NOT_SUPPORTED
+    oAdvertisementData.setCompleteServices(BLEUUID(SERVICE_UUID));
+    oAdvertisementData.setName("Todesco");
+    pAdvertising->setAdvertisementData(oAdvertisementData);
+
     BLEDevice::startAdvertising();
 
     Serial.printf("[BLE] Grudado no UUID: %s\n", SERVICE_UUID);

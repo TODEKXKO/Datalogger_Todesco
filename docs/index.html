@@ -43,7 +43,9 @@
 
                 msg.innerText = "Pesquisando Datalogger...";
                 device = await navigator.bluetooth.requestDevice({
-                      filters: [{ services: [SERVICE_UUID] }]
+                    filters: [{ namePrefix: "Todesco" }],
+                    optionalServices: [SERVICE_UUID]
+                });
 
                 msg.innerText = "Conectando ao Bluetooth do projeto...";
                 server = await device.gatt.connect();
