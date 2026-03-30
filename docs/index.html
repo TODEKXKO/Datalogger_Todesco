@@ -23,10 +23,9 @@
     </div>
 
     <script>
+        // Precisamos apenas de DOIS UUIDs: O do Serviço e o do Canal de Recepção (RX)
         const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-        const SSID_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
-        const PASS_UUID = "a5b9c02d-0579-43c7-9fb6-63e843ebaf5b";
-        const EMAIL_UUID = "c8659212-af91-4ad3-a995-a58d6fd26145";
+        const RX_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; 
 
         let device, server;
         const msg = document.getElementById('status');
@@ -51,22 +50,19 @@
                 server = await device.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_UUID);
 
-                msg.innerText = "Enviando Nome da Rede (SSID)...";
-                const ssidChar = await service.getCharacteristic(SSID_UUID);
-                await ssidChar.writeValue(new TextEncoder().encode(ssid));
+                msg.innerText = "Enviando Configurações...";
+                const rxChar = await service.getCharacteristic(RX_UUID);
+                
+                // A MÁGICA ACONTECE AQUI: Junta os 3 dados usando o separador ;;
+                const pacoteDeDados = ssid + ";;" + pass + ";;" + email;
 
-                msg.innerText = "Enviando Senha...";
-                const passChar = await service.getCharacteristic(PASS_UUID);
-                await passChar.writeValue(new TextEncoder().encode(pass));
-
-                msg.innerText = "Enviando E-mail...";
-                const emailChar = await service.getCharacteristic(EMAIL_UUID);
-                await emailChar.writeValue(new TextEncoder().encode(email));
+                // Envia o pacote inteiro de uma vez só
+                await rxChar.writeValue(new TextEncoder().encode(pacoteDeDados));
 
                 msg.innerText = "✅ Tudo Certo! Verifique a tela do equipamento.";
                 msg.style.color = "green";
                 
-                // Desconecta após enviar e permitir que o ESP32 conecte no Wifi
+                // Desconecta após enviar e permite que o ESP32 conecte no Wifi
                 setTimeout(() => server.disconnect(), 1000);
 
             } catch (error) {
