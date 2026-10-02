@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: "Código enviado com sucesso!" });
 
-  } catch (err: any) {
+  } catch (err) {
     console.error("Erro Send OTP:", err);
     return NextResponse.json({ error: "Erro interno no servidor." }, { status: 500 });
   }

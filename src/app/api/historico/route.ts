@@ -67,9 +67,9 @@ export async function GET(request: Request) {
       cliente: { nomeClinica, dataCalibracaoRbc, responsavelTecnico }
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro ao consultar Histórico no DynamoDB:", error);
     console.log("Detalhes do erro:", JSON.stringify(error, null, 2));
-    return NextResponse.json({ error: "Falha ao buscar dados históricos", details: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Falha ao buscar dados históricos", details: (error as Error).message }, { status: 500 });
   }
 }

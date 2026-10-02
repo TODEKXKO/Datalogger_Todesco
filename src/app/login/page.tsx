@@ -28,8 +28,9 @@ export default function Login() {
       if (!res.ok) throw new Error(data.error || "Erro ao enviar código de acesso.");
       
       setStep(2);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
+      else setError("Erro inesperado.");
     } finally {
       setLoading(false);
     }
@@ -51,8 +52,9 @@ export default function Login() {
       if (!res.ok) throw new Error(data.error || "Código inválido.");
       
       router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
+      else setError("Erro inesperado.");
     } finally {
       setLoading(false);
     }

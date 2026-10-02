@@ -11,7 +11,7 @@ import SHA256 from "crypto-js/sha256";
 const MAC_ADDRESS = "FC012CDA2F28";
 
 export default function Dashboard() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<Record<string, unknown>[]>([]);
   const [latest, setLatest] = useState<{ temp?: number | string; umidade?: number | string; bateriaText?: string }>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -95,8 +95,8 @@ export default function Dashboard() {
       }
 
       const cronologico = [...dadosHistorico].reverse();
-      const filteredData: any[] = [];
-      let lastSaved: any = null;
+      const filteredData: Record<string, unknown>[] = [];
+      let lastSaved: { temp: number; time: number } | null = null;
 
       cronologico.forEach((item) => {
         const itemTemp = Number(item.temperatura ?? item.temp);
@@ -133,8 +133,8 @@ export default function Dashboard() {
       doc.text(`MAC: ${MAC_ADDRESS} | Período da Análise: ${tituloPeriodo} (${dias} ${dias === 1 ? 'dia' : 'dias'})`, 14, 35);
       doc.text(`Data de Geração: ${new Date().toLocaleString('pt-BR')}`, 14, 40);
 
-      const tableData = filteredData.map((item: any) => {
-        let ts = item.timestamp || item.createdAt || "";
+      const tableData = filteredData.map((item: Record<string, unknown>) => {
+        let ts = (item.timestamp || item.createdAt || "") as string;
         if (ts && !ts.endsWith('Z')) ts += 'Z';
         let dataStr = '--', horaStr = '--';
         if (ts) {
@@ -146,8 +146,8 @@ export default function Dashboard() {
         return [
           dataStr,
           horaStr,
-          item.temperatura ?? item.temp ?? '--',
-          item.umidade ?? item.humidity ?? '--'
+          (item.temperatura ?? item.temp ?? '--') as string | number,
+          (item.umidade ?? item.humidity ?? '--') as string | number
         ];
       });
 
@@ -159,7 +159,7 @@ export default function Dashboard() {
         headStyles: { fillColor: [27, 36, 64], textColor: [255, 255, 255], fontStyle: 'normal' },
         styles: { fontSize: 10, cellPadding: 4 },
         alternateRowStyles: { fillColor: [248, 250, 252] },
-        didDrawPage: function (dataHook) {
+        didDrawPage: function () {
           doc.setFontSize(6);
           doc.setTextColor(161, 161, 170); 
           const pageHeight = doc.internal.pageSize.getHeight();
@@ -167,7 +167,7 @@ export default function Dashboard() {
         }
       });
 
-      const finalY = (doc as any).lastAutoTable.finalY || 48;
+      const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable?.finalY || 48;
       const pageHeight = doc.internal.pageSize.getHeight();
       
       let startAssinaturaY = finalY;

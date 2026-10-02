@@ -30,9 +30,9 @@ export async function GET() {
     const sortedItems = items.reverse();
 
     return NextResponse.json(sortedItems);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro ao consultar DynamoDB:", error);
     console.log("Detalhes do Erro da AWS:", JSON.stringify(error, null, 2));
-    return NextResponse.json({ error: "Falha ao buscar dados", details: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Falha ao buscar dados", details: (error as Error).message }, { status: 500 });
   }
 }

@@ -22,8 +22,16 @@ export default function Config() {
       }
 
       setStatusMessage({ type: 'info', text: 'Buscando dispositivo...' });
+
+      interface BluetoothCharacteristic { writeValue: (v: BufferSource) => Promise<void>; }
+      interface BluetoothGATTService { getCharacteristic: (uuid: string) => Promise<BluetoothCharacteristic>; }
+      interface BluetoothGATTServer { getPrimaryService: (uuid: string) => Promise<BluetoothGATTService>; }
+      interface BluetoothDevice {
+        gatt: { connect: () => Promise<BluetoothGATTServer> };
+        addEventListener: (event: string, cb: () => void) => void;
+      }
       
-      const device = await (navigator as any).bluetooth.requestDevice({
+      const device = await (navigator as unknown as { bluetooth: { requestDevice: (options: Record<string, unknown>) => Promise<BluetoothDevice> } }).bluetooth.requestDevice({
         filters: [{ namePrefix: "Todes" }, { namePrefix: "TDSC" }], // Adicionado TDSC conforme solicitado
         optionalServices: [SERVICE_UUID]
       });
@@ -49,15 +57,16 @@ export default function Config() {
       // Se a promessa do writeValue resolver antes de desconectar
       setStatusMessage({ type: 'success', text: '✅ Dados enviados! O aparelho está reiniciando e conectando ao Wi-Fi.' });
 
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      if (dadosEnviados && error.name === 'NetworkError') {
+      const err = error as Error;
+      if (dadosEnviados && err.name === 'NetworkError') {
         // Disconnect jogado como erro durante o envio (comum em ESP32 que reinicia)
         setStatusMessage({ type: 'success', text: '✅ Dados enviados! O aparelho está reiniciando e conectando ao Wi-Fi.' });
       } else {
         // Ignora erro se o usuário apenas fechou/cancelou o popup do bluetooth
-        if (error.name !== 'NotFoundError') {
-          setStatusMessage({ type: 'error', text: `Erro de conexão: ${error.message}` });
+        if (err.name !== 'NotFoundError') {
+          setStatusMessage({ type: 'error', text: `Erro de conexão: ${err.message}` });
         } else {
           setStatusMessage(null);
         }
