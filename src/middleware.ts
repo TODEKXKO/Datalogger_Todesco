@@ -5,8 +5,8 @@ export function middleware(request: NextRequest) {
   const session = request.cookies.get('auth_session');
   const path = request.nextUrl.pathname;
 
-  // Rotas protegidas (todas dentro do dashboard e config)
-  const isProtected = path.startsWith('/dashboard') || path.startsWith('/config');
+  // Rotas protegidas (apenas o dashboard)
+  const isProtected = path.startsWith('/dashboard');
 
   if (!session && isProtected) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -21,5 +21,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/config/:path*', '/login'],
+  matcher: ['/dashboard/:path*', '/login'],
 };

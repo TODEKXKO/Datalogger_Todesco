@@ -9,7 +9,7 @@ export function NavBar() {
         </div>
         <div className="flex gap-6 text-sm font-medium text-[#fff8ec]/80">
           <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
-          <Link href="/config" className="hover:text-white transition-colors">Configuração</Link>
+          <Link href="/" className="hover:text-white transition-colors">Configuração</Link>
           <a href="/api/auth/logout" className="hover:text-white transition-colors">Sair</a>
         </div>
       </div>
